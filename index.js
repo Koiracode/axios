@@ -8,63 +8,43 @@ const port = 3000;
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Step 1: Make sure that when a user visits the home page,
-//   it shows a random activity.You will need to check the format of the
-//   JSON data from response.data and edit the index.ejs file accordingly.
+
+// Helper function to handle rendering with consistent data
+const renderPage = (res, data, error = null, activity = null, type = '', participants = '') => {
+  res.render("index.ejs", { 
+    data: data || [], 
+    activity: activity, 
+    type: type, 
+    participants: participants, 
+    error: error
+  });
+};
+
 app.get("/", async (req, res) => {
   try {
     const response = await axios.get("http://localhost:4000/random");
     const result = response.data;
-    // console.log(response.data);
+    renderPage(res,result);
 
-    res.render("index.ejs", { data: result });
+    
   } catch (error) {
     console.error("Failed to make request:", error.message);
-    res.render("index.ejs", {
-      error: error.message,
-    });
+    renderPage(res, [], error.message, null, type || '', participants || '');
   }
 });
 
 app.post("/", async (req, res) => {
-  // console.log(req.body);
   try {
     const response = await axios.get(`http://localhost:4000/filter?type=${req.body.type}&participants=${req.body.participants}`);
     const result = response.data;
-    //  console.log(result[5]);
-    // console.log(result.length);
-     let findActivity = result[Math.floor(Math.random() * result.length)];
-    // let findActivity = result[5];
-    console.log(`req body type ${req.body.type}`);
-    console.log(`find activty ${findActivity.activity}`);
+    let findActivity = result.length > 0 ? result[Math.floor(Math.random() * result.length)] : null;
+    console.log(findActivity);
+    renderPage(res, findActivity );
 
-    res.render("index.ejs", { 
-      data: result, 
-      type: req.body.type, 
-      participants: req.body.participants,
-      activity: findActivity,
-    
-    });
   } catch (error) {
-    console.error(`no activity found with activity= ${req.body.type} & participants=${req.body.participants}`);
-    
-    res.render("index.ejs", { 
-      error: error.message,
-      data: null, 
-      type: req.body.type, 
-      participants: req.body.participants, 
-       
-    });
+    renderPage(res, [], error.message, null, '', '');
   }
 
-  // Step 2: Play around with the drop downs and see what gets logged.
-  // Use axios to make an API request to the /filter endpoint. Making
-  // sure you're passing both the type and participants queries.
-  // Render the index.ejs file with a single *random* activity that comes back
-  // from the API request.
-  // Step 3: If you get a 404 error (resource not found) from the API request.
-  // Pass an error to the index.ejs to tell the user:
-  // "No activities that match your criteria."
 });
 
 app.listen(port, () => {
